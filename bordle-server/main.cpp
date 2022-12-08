@@ -14,16 +14,16 @@ int main() {
 			"Assertion failed! port variable in config.toml is too big! Maximum is 65'535",
 			print_error);
 	assert_(toml::find<long long>(data, "port") > 0,
-		   "Assertion failed! port variable in config.toml must be greater than 0!",
-		   print_error);
-	assert_(toml::find<long long>(data, "attempt_count") <= 65'535,
-		   "Assertion failed! attempt_count variable in config.toml is too big! Maximum is 65'535",
-		   print_error);
-	assert_(toml::find<long long>(data, "attempt_count" > 0),
-		   "Assertion failed! attempt_count variable in config.toml must be greater than 0!",
-		   print_error);
+		    "Assertion failed! port variable in config.toml must be greater than 0!",
+		    print_error);
+	assert_(toml::find<long long>(data, "max_attempts") <= 65'535,
+		    "Assertion failed! attempt_count variable in config.toml is too big! Maximum is 65'535",
+		    print_error);
+	assert_(toml::find<long long>(data, "max_attempts" > 0),
+		    "Assertion failed! attempt_count variable in config.toml must be greater than 0!",
+		    print_error);
 
-	const auto port = toml::find<unsigned short>(data, "port");
-	const auto attempt_count = toml::find<unsigned short>(data, "attempt_count");
-	const auto ip_address = toml::find<std::string>(data, "ip_address");
+	const auto port			= toml::find<unsigned short>(data, "port");
+	const auto max_attempts = toml::find<unsigned short>(data, "max_attempts");
+	const auto ip_address	= toml::find<std::string>(data, "ip_address");
 }
