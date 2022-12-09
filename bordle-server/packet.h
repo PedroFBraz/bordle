@@ -22,28 +22,27 @@ std::vector<std::byte> serialize_packet(const Packet& packet) {
 	// Endianness might become a problem later on
 	serialized.emplace_back(size_in_bytes[0]);
 	serialized.emplace_back(size_in_bytes[1]);
-	serialized.emplace_back(packet.operation());
-	serialized.emplace_back(packet.operand());
+	serialized.emplace_back(packet.message_type());
+	serialized.emplace_back(packet.message_content());
 	return serialized;
 }
-/* 
-   It might be better to store the errorand the operation into a single byte,
-   as an operation cannot success if an error ocurred
-*/
+
 class Packet {
 public:
 	Packet() = delete;
-	Packet(unsigned short size, Error error, Operation operation, std::vector<std::byte> operand) 
-		: m_size{ size }, m_error{ error }, m_operation{ operation }, m_operand{ operand }
+	Packet(unsigned short size, Error error, std::vector<std::byte> error_message) 
+		: m_size{size}, m_message_type{static_cast<std::byte>(error)}, m_message_content{error_message}
 	{}
-	unsigned short		   size()	   const { return m_size; }
-	Error				   error()	   const { return m_error; }
-	Operation			   operation() const { return m_operation; }
-	std::vector<std::byte> operand()   const { return m_operand; }
+	Packet(unsigned short size, Operation operation, std::vector<std::byte> operand)
+		: m_size{size}, m_message_type{static_cast<std::byte>(operation)}, m_message_content{operand}
+	{}
+	unsigned short		   size()			 const { return m_size; }
+	std::byte			   message_type()	 const { return m_message_type; }
+	std::vector<std::byte> message_content() const { return m_message_content; }
 private:
 	unsigned short m_size;
-	Error m_error;
-	Operation m_operation;
-	std::vector<std::byte> m_operand;
+	std::byte m_message_type;
+	std::vector<std::byte> m_message_content;
+
 };
 
