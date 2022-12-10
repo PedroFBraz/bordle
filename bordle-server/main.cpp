@@ -41,7 +41,7 @@ int main() {
 	assert_(toml::find<long long>(data, "word_size") <= 65'535,
 			"Assertion failed! word_size variable must not be greater than 65'535!",
 			print_error);
-	assert_(toml::find<long long>(data, "word_size" > 0),
+	assert_(toml::find<long long>(data, "word_size") > 0,
 			"Assertion failed! word_size variable must be greater than 0!",
 			print_error);
 #pragma endregion
@@ -64,5 +64,12 @@ int main() {
 											"got_today_correct INT);"
 											"CREATE TABLE IF NOT EXISTS bordles (word VARCHAR({}),"
 											"date DATE);", word_size);
-	sqlite3_exec(db, sql_statement.c_str(), nullptr, nullptr, nullptr); // Todo: Perform error handling
+	char*  sqlite_error_message = static_cast<char*>(sqlite3_malloc(1024));
+	sqlite3_exec(db, sql_statement.c_str(), nullptr, nullptr, &sqlite_error_message); 
+	if (sqlite_error_message) {
+		std::cout << sqlite_error_message;
+		std::exit(1);
+	}
+	sqlite3_free(sqlite_error_message);
+	sqlite_error_message = nullptr;
 }
