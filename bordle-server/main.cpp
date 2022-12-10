@@ -19,26 +19,38 @@ void print_error(std::string error_message) {
 
 int main() {
 	const auto data = toml::parse("config.toml");
-
+#pragma region Asserts
 	assert_(toml::find<long long>(data, "port") <= 65'535,
-			"Assertion failed! port variable in config.toml is too big! Maximum is 65'535",
+			"Assertion failed! port variable in config.toml must not be greater than 65'535!",
 			print_error);
 	assert_(toml::find<long long>(data, "port") > 0,
 		    "Assertion failed! port variable in config.toml must be greater than 0!",
 		    print_error);
 	assert_(toml::find<long long>(data, "max_attempts") <= 65'535,
-		    "Assertion failed! attempt_count variable in config.toml is too big! Maximum is 65'535",
+		    "Assertion failed! attempt_count variable in config.toml must not be greater than 65'535!",
 		    print_error);
 	assert_(toml::find<long long>(data, "max_attempts") > 0,
 		    "Assertion failed! attempt_count variable in config.toml must be greater than 0!",
 		    print_error);
-
+	assert_(toml::find<std::string>(data, "db_name").length() <= 1024,
+			"Assertion failed! db_name variable length must not be greater than 1024!",
+			print_error);
+	assert_(!toml::find<std::string>(data, "db_name").empty(),
+			"Assertion failed! db_name variable must not be an empty string!",
+			print_error);
+	assert_(toml::find<long long>(data, "word_size") <= 65'535,
+			"Assertion failed! word_size variable must not be greater than 65'535!",
+			print_error);
+	assert_(toml::find<long long>(data, "word_size" > 0),
+			"Assertion failed! word_size variable must be greater than 0!",
+			print_error);
+#pragma endregion
 	const auto port			= toml::find<unsigned short>(data, "port");
 	const auto max_attempts = toml::find<unsigned short>(data, "max_attempts");
 	const auto ip_address	= toml::find<std::string>(data, "ip_address");
-	const auto db_name		= toml::find<std::string>(data, "db_name"); // Todo: Add checks to see if the string is empty and check for size (or else sqlite returns an error if the file name is too long)
+	const auto db_name		= toml::find<std::string>(data, "db_name");
 	const auto create_db    = toml::find<bool>(data, "create_db");
-	const auto word_size	= toml::find<unsigned short>(data, "word_size"); // Todo: Add checks
+	const auto word_size	= toml::find<unsigned short>(data, "word_size");
 	sqlite3* db = nullptr;
 	sqlite3_open_v2(db_name.c_str(), &db, (create_db ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READWRITE), BORDLE_VFS);
 	assert_(sqlite3_errcode(db) != SQLITE_CANTOPEN, "Assertion failed! Cannot open database file."
