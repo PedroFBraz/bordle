@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <format>
+#include <algorithm>
 #include "util.h"
 #include "toml.hpp"
 #include "sqlite3.h"
@@ -55,7 +56,7 @@ int main() {
 	sqlite3_open_v2(db_name.c_str(), &db, (create_db ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READWRITE), BORDLE_VFS);
 	assert_(sqlite3_errcode(db) != SQLITE_CANTOPEN, "Assertion failed! Cannot open database file."
 		   "\nHint: You might never have created a database file."
-		   "\nYou might have set the create_db variable in config.toml to false",
+		   "\nHint: You might have set the create_db variable in config.toml to false.",
 		  print_error);
 
 	// Todo: Ensure that name isn't bigger than 255
@@ -65,11 +66,9 @@ int main() {
 											"CREATE TABLE IF NOT EXISTS bordles (word VARCHAR({}),"
 											"date DATE);", word_size);
 	char*  sqlite_error_message = static_cast<char*>(sqlite3_malloc(1024));
+	std::fill(sqlite_error_message, sqlite_error_message + 1023, '\0');
 	sqlite3_exec(db, sql_statement.c_str(), nullptr, nullptr, &sqlite_error_message); 
-	if (sqlite_error_message) {
-		std::cout << sqlite_error_message;
-		std::exit(1);
-	}
+	assert_(!sqlite_error_message, sqlite_error_message, print_error);
 	sqlite3_free(sqlite_error_message);
 	sqlite_error_message = nullptr;
 }
