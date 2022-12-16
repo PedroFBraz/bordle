@@ -8,6 +8,7 @@
 #include "util.h"
 #include "toml.hpp"
 #include "sqlite3.h"
+#include "spdlog/spdlog.h"
 
 #if defined(_WIN32)
 	#define BORDLE_VFS "win32"
@@ -17,41 +18,26 @@
 	#error Unsupported operating system
 #endif
 
-
-
-void print_error(std::string error_message) {
-	std::cout << error_message << std::endl;
-}
-
-
 int main() {
-	
+	// todo: words_file_name
 	const auto data = toml::parse("config.toml");
 #pragma region Asserts
 	assert_(toml::find<long long>(data, "port") <= 65'535,
-			"Assertion failed! port variable in config.toml must not be greater than 65'535!",
-			print_error);
+			"Assertion failed! port variable in config.toml must not be greater than 65'535!");
 	assert_(toml::find<long long>(data, "port") > 0,
-		    "Assertion failed! port variable in config.toml must be greater than 0!",
-		    print_error);
+		    "Assertion failed! port variable in config.toml must be greater than 0!");
 	assert_(toml::find<long long>(data, "max_attempts") <= 65'535,
-		    "Assertion failed! attempt_count variable in config.toml must not be greater than 65'535!",
-		    print_error);
+		    "Assertion failed! attempt_count variable in config.toml must not be greater than 65'535!");
 	assert_(toml::find<long long>(data, "max_attempts") > 0,
-		    "Assertion failed! attempt_count variable in config.toml must be greater than 0!",
-		    print_error);
+		    "Assertion failed! attempt_count variable in config.toml must be greater than 0!");
 	assert_(toml::find<std::string>(data, "db_name").length() <= 1024,
-			"Assertion failed! db_name variable length must not be greater than 1024!",
-			print_error);
+			"Assertion failed! db_name variable length must not be greater than 1024!");
 	assert_(!toml::find<std::string>(data, "db_name").empty(),
-			"Assertion failed! db_name variable must not be an empty string!",
-			print_error);
+			"Assertion failed! db_name variable must not be an empty string!");
 	assert_(toml::find<long long>(data, "word_size") <= 65'535,
-			"Assertion failed! word_size variable must not be greater than 65'535!",
-			print_error);
+			"Assertion failed! word_size variable must not be greater than 65'535!");
 	assert_(toml::find<long long>(data, "word_size") > 0,
-			"Assertion failed! word_size variable must be greater than 0!",
-			print_error);
+			"Assertion failed! word_size variable must be greater than 0!");
 #pragma endregion
 	const auto port			= toml::find<unsigned short>(data, "port");
 	const auto max_attempts = toml::find<unsigned short>(data, "max_attempts");
@@ -63,8 +49,7 @@ int main() {
 	sqlite3_open_v2(db_name.c_str(), &db, (create_db ? SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE : SQLITE_OPEN_READWRITE), BORDLE_VFS);
 	assert_(sqlite3_errcode(db) != SQLITE_CANTOPEN, "Assertion failed! Cannot open database file."
 		   "\nHint: You might never have created a database file."
-		   "\nHint: You might have set the create_db variable in config.toml to false.",
-		  print_error);
+		   "\nHint: You might have set the create_db variable in config.toml to false.");
 	// Todo: Ensure that name isn't bigger than 255
 	std::string sql_statement = std::format("CREATE TABLE IF NOT EXISTS users (ip CHARACTER(32),"
 											"name CHARACTER(255), correct INT, wrong INT,"
@@ -72,6 +57,7 @@ int main() {
 											"CREATE TABLE IF NOT EXISTS bordles (word VARCHAR({}),"
 											"date DATE,"
 											"UNIQUE(word));", word_size);
+	spdlog::debug("Line {}: {}.", __LINE__, sqlite3_errmsg(db));
 	char*  sqlite_error_message = static_cast<char*>(sqlite3_malloc(1024));
 	std::fill(sqlite_error_message, sqlite_error_message + 1023, '\0');
 	sqlite3_exec(db, sql_statement.c_str(), nullptr, nullptr, &sqlite_error_message);
@@ -79,15 +65,18 @@ int main() {
 	const auto current_time = std::chrono::system_clock::now().time_since_epoch().count();
 	constexpr auto day_in_seconds = 86'400;
 	std::ifstream words("words.txt");
-	assert_(words.is_open(), "Assertion failed! Failed to open words.txt", print_error); 
+	assert_(words.is_open(), "Assertion failed! Failed to open words.txt"); 
 	for (unsigned long long i = current_time; !words.eof(); i += day_in_seconds) {
 		std::string word;
 		words >> word;
-		//assert_(word.size() == word_size, std::vformat("Assertion failed! {:x} is {} than {}!", std::make_format_args(word, (word.size() > word_size ? "bigger" : "smaller"), word_size)), print_error);
 		std::string sql_statement = std::format("INSERT OR IGNORE INTO bordles VALUES ('{}', {});", word, i); // This probably isn't efficient
+		spdlog::debug("Line {}: {}.", __LINE__, sqlite3_errmsg(db));
 		
-		//	If there is a last empty newline in words.txt, it gets inserted into the database.
+		//	If there is a last empty newline in words.txt, it gets inserted into the database without this.
 		if (!word.empty()) {
+			if (word.size() != word_size) {
+				spdlog::warn("Length of \"{}\" ({}) is {} than {}. Skipping insertion of the word into the database.", word, word.size(), (word.size() > word_size ? "bigger" : "smaller"), word_size);
+			}
 			sqlite3_exec(db, sql_statement.c_str(), nullptr, nullptr, &sqlite_error_message);
 		}
 		//assert_(!sqlite_error_message, sqlite_error_message, print_error); // Buggy
@@ -95,4 +84,5 @@ int main() {
 	words.close();
 	sqlite3_free(sqlite_error_message);
 	sqlite_error_message = nullptr;
+	sqlite3_close(db);
 }

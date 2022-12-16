@@ -1,11 +1,11 @@
 #pragma once
 #include <string>
 #include <cstdlib>
+#include "spdlog/spdlog.h"
 
-template <typename Error_handler>
-void assert_(bool assertion, std::string error_message, Error_handler error_handler) {
+void assert_(bool assertion, std::string error_message) {
 	if (!assertion) {
-		error_handler(error_message);
+		spdlog::error(error_message);
 		std::exit(1);
 	}
 }
